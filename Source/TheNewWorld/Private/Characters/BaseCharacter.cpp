@@ -15,6 +15,7 @@
 #include "DrawDebugHelpers.h"
 #include "Materials/MaterialInstance.h"
 #include "Camera/CSB_Fire.h"
+#include "Camera/CSB_Hit.h"
 #include "HealthSystem/HealthComponent.h"
 #include "UI/PlayerHUD.h"
 #include "UI/Crosshair.h"
