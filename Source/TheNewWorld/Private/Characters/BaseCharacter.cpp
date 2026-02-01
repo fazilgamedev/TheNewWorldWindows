@@ -20,6 +20,8 @@
 #include "UI/PlayerHUD.h"
 #include "UI/Crosshair.h"
 #include "UI/HealthBar.h"
+#include "Components/ProgressBar.h"
+#include "Animation/AnimSequence.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -69,7 +71,7 @@ ABaseCharacter::ABaseCharacter()
 	Loadout.CurrentWeaponINDEX = 0;
 
 	HealthComponent->OnDeath.AddDynamic(this, &ABaseCharacter::Death);
-	HealthComponent->OnDamageResponse.AddDynamic(this, &ABaseCharacter::DamageResponse);
+	HealthComponent->OnHealthChanged.AddDynamic(this, &ABaseCharacter::OnHealthChanged);
 	HealthComponent->MaxHealth = 100.f;
 
 	
@@ -106,6 +108,8 @@ void ABaseCharacter::BeginPlay()
 	BodyAnimInst = Cast<UBodyAnimInst>(GetMesh()->GetAnimInstance());
 
 	SwitchUnarmed();
+
+	OnHealthChanged();
 
 }
 
@@ -352,9 +356,25 @@ void ABaseCharacter::Death()
 	UE_LOG(LogTemp, Warning, TEXT("DEAD"));
 }
 
-void ABaseCharacter::DamageResponse(EDamageResponse DamageResponse)
+void ABaseCharacter::MC_OnHealthChanged_Implementation()
 {
-	if (IsLocallyControlled() && HUDREF && HUDREF->HealthBarWidget) HUDREF->HealthBarWidget->PlayAnimation(HUDREF->HealthBarWidget->OnHit, 0.f, 1, EUMGSequencePlayMode::PingPong, 1.5f);
+	if (IsLocallyControlled() && HUDREF && HUDREF->HealthBarWidget) 
+		if (GetClass()->ImplementsInterface(UHealthInterface::StaticClass())) {
+			HUDREF->HealthBarWidget->HealthBar->SetPercent(IHealthInterface::Execute_GetCurrentHealth(this) / IHealthInterface::Execute_GetMaxHealth(this));
+			HUDREF->HealthBarWidget->PlayAnimation(HUDREF->HealthBarWidget->OnHit, 0.f, 1, EUMGSequencePlayMode::PingPong, 1.3f);
+			if (PCREF) PCREF->ClientStartCameraShake(UCSB_Hit::StaticClass(), 1.3f);
+		}
+}
+
+void ABaseCharacter::SR_OnHealthChanged_Implementation()
+{
+	MC_OnHealthChanged();
+}
+
+void ABaseCharacter::OnHealthChanged()
+{
+	if (HasAuthority()) MC_OnHealthChanged();
+	else SR_OnHealthChanged();
 }
 
 UWeaponMaster *ABaseCharacter::GetWeaponAtINDEX(int32 INDEX)
@@ -426,8 +446,8 @@ void ABaseCharacter::SpawnWeapon(TSubclassOf<UWeaponMaster> WeaponToSpawn)
 void ABaseCharacter::ADS(float Value)
 {
 	if(!GetCurrentWeapon()) return;
-	if(IsLocallyControlled() && Value > .5f && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnAim(true);
-	else HUDREF->CrosshairWidget->PlayOnAim(false);
+	/*if(IsLocallyControlled() && Value > .5f && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnAim(true);
+	else HUDREF->CrosshairWidget->PlayOnAim(false);*/
 	if(ArmsAnimInst) ArmsAnimInst->AimAlpha = FMath::FInterpTo(ArmsAnimInst->AimAlpha, Value, GetWorld()->GetDeltaSeconds(), 10.f);
 	Camera->SetFieldOfView(FMath::Lerp(120.f, GetCurrentWeapon()->ADSFOV, ArmsAnimInst->AimAlpha));
 }

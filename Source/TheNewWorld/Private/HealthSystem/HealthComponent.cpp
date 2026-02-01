@@ -11,24 +11,22 @@ UHealthComponent::UHealthComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
 
+	// ...
+	
+	SetIsReplicatedByDefault(true);
+
 	bIsDead = false;
 
-	// ...
 }
 
-void UHealthComponent::OnRep_CurrentHealth(float OldHealth)
+void UHealthComponent::OnRep_CurrentHealth()
 {
-
+	OnHealthChanged.Broadcast();
 }
 
 void UHealthComponent::OnRep_bIsDead()
 {
-	if(bIsDead) OnDeath.Broadcast();
-}
-
-void UHealthComponent::OnRep_OldDamageInfo()
-{
-	OnDamageResponse.Broadcast(OldDamageInfo.DamageResponse);
+	OnDeath.Broadcast();
 }
 
 // Called when the game starts
@@ -53,10 +51,8 @@ void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UHealthComponent, MaxHealth);
 	DOREPLIFETIME(UHealthComponent, CurrentHealth);
 	DOREPLIFETIME(UHealthComponent, bIsDead);
-	DOREPLIFETIME(UHealthComponent, OldDamageInfo);
 
 }
 
@@ -69,16 +65,14 @@ float UHealthComponent::Heal(float Amount)
 
 bool UHealthComponent::TakeDamage(FDamageInfo DamageInfo)
 {
-	if(!GetOwner()->HasAuthority() || bIsDead) return false;
+	//if (!GetOwner()->HasAuthority()) return false;
+	if (bIsDead) return false;
 	CurrentHealth = FMath::Clamp(CurrentHealth - DamageInfo.Amount, 0.f, MaxHealth);
-	OldDamageInfo = DamageInfo;
-	if(!GetWorld()->IsNetMode(NM_DedicatedServer)){
-		OnRep_OldDamageInfo();
-	}
-	if(CurrentHealth <= 0.f){
+	if (GetOwner()->HasAuthority()) OnRep_CurrentHealth();
+	if (CurrentHealth <= 0.f) {
 		bIsDead = true;
-		OnRep_bIsDead();
+		if (GetOwner()->HasAuthority()) OnRep_bIsDead();
+		return true;
 	}
-	OnRep_CurrentHealth(CurrentHealth + DamageInfo.Amount);
 	return true;
 }

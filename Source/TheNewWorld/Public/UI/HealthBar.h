@@ -32,8 +32,6 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthBar;
 
-	UFUNCTION(BlueprintPure)
-	float UpdateHealth();
 
 	UPROPERTY(Transient, BlueprintReadOnly, meta = (BindWidgetAnim))
 	UWidgetAnimation* OnHit;

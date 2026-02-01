@@ -17,6 +17,7 @@ class UBodyAnimInst;
 class APlayerContoller;
 class UHealthComponent;
 class APlayerHUD;
+class UAnimSequence;
 
 USTRUCT(BlueprintType)
 struct FLoadout
@@ -75,6 +76,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UHealthComponent* HealthComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimSequence* DeathAnim;
 
 	UPROPERTY()
 	FVector NavPoint;
@@ -209,8 +213,14 @@ private:
 	UFUNCTION()
 	void Death();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_OnHealthChanged();
+
+	UFUNCTION(Server, Reliable)
+	void SR_OnHealthChanged();
+
 	UFUNCTION()
-	void DamageResponse(EDamageResponse DamageResponse);
+	void OnHealthChanged();
 
 
 public:

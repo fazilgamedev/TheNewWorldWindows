@@ -7,8 +7,8 @@
 #include "HealthSystem/DamageInfo.h"
 #include "HealthComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnHealthChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamageResponse, EDamageResponse, DamageResponse);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class THENEWWORLD_API UHealthComponent : public UActorComponent
@@ -19,14 +19,14 @@ public:
 	// Sets default values for this component's properties
 	UHealthComponent();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
-	float MaxHealth = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxHealth;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth = MaxHealth;
 
 	UFUNCTION()
-	void OnRep_CurrentHealth(float OldHealth);
+	void OnRep_CurrentHealth();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_bIsDead)
 	bool bIsDead;
@@ -34,18 +34,12 @@ public:
 	UFUNCTION()
 	void OnRep_bIsDead();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_OldDamageInfo)
-	FDamageInfo OldDamageInfo;
-
-	UFUNCTION()
-	void OnRep_OldDamageInfo();
-
+	UPROPERTY(BlueprintAssignable)
+	FOnHealthChanged OnHealthChanged;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnDeath OnDeath;
 
-	UPROPERTY(BlueprintAssignable)
-	FOnDamageResponse OnDamageResponse;	
 
 protected:
 	// Called when the game starts
@@ -57,10 +51,11 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION()
 	float Heal(float Amount);
 
-	UFUNCTION(BlueprintCallable)
-	bool TakeDamage(FDamageInfo DamageInfo);	
+	UFUNCTION()
+	bool TakeDamage(FDamageInfo DamageInfo);
+	
 	
 };
