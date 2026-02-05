@@ -24,11 +24,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UWeaponMaster> WeaponToSpawn;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	int32 CurrentMagCount;
+
 protected:
 
 	virtual void BeginPlay() override;
 
 public:
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void Interact_Implementation(ABaseCharacter* Interactor) override;
 

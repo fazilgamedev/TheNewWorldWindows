@@ -70,7 +70,7 @@ ABaseCharacter::ABaseCharacter()
 	Loadout.Weapons.Init(nullptr, 2);
 	Loadout.CurrentWeaponINDEX = 0;
 
-	HealthComponent->OnDeath.AddDynamic(this, &ABaseCharacter::Death);
+	HealthComponent->OnDeath.AddDynamic(this, &ABaseCharacter::OnDeath);
 	HealthComponent->OnHealthChanged.AddDynamic(this, &ABaseCharacter::OnHealthChanged);
 	HealthComponent->MaxHealth = 100.f;
 
@@ -289,6 +289,7 @@ void ABaseCharacter::SR_StopAttack_Implementation()
 
 void ABaseCharacter::Trace()
 {
+	if (GetCurrentWeapon()->CurrentMagCount <= 0) return;
 	FHitResult FireHitResult;
 	FVector S = Camera->GetComponentLocation();
 	FVector E = S + GetBaseAimRotation().Vector() * GetCurrentWeapon()->Range;
@@ -310,6 +311,7 @@ void ABaseCharacter::Trace()
 void ABaseCharacter::MC_Fire_Implementation(FVector HitLoc, FRotator HitRot, AActor *HitActor)
 {
 	if(!GetCurrentWeapon()) return;
+	GetCurrentWeapon()->CurrentMagCount--;
 	if(IsLocallyControlled()){ 
 		WeaponFP->PlayAnimation(GetCurrentWeapon()->FireAnim, false);
 		ArmsAnimInst->Firing();
@@ -351,9 +353,9 @@ void ABaseCharacter::Recoil()
 	AddControllerYawInput(FMath::RandRange(-GetCurrentWeapon()->Recoil_Horizontal_Left, GetCurrentWeapon()->Recoil_Horizontal_Right));
 }
 
-void ABaseCharacter::Death()
+void ABaseCharacter::OnDeath()
 {
-	UE_LOG(LogTemp, Warning, TEXT("DEAD"));
+	GetMesh()->PlayAnimation(DeathAnim, false);
 }
 
 void ABaseCharacter::MC_OnHealthChanged_Implementation()
@@ -361,7 +363,7 @@ void ABaseCharacter::MC_OnHealthChanged_Implementation()
 	if (IsLocallyControlled() && HUDREF && HUDREF->HealthBarWidget) 
 		if (GetClass()->ImplementsInterface(UHealthInterface::StaticClass())) {
 			HUDREF->HealthBarWidget->HealthBar->SetPercent(IHealthInterface::Execute_GetCurrentHealth(this) / IHealthInterface::Execute_GetMaxHealth(this));
-			HUDREF->HealthBarWidget->PlayAnimation(HUDREF->HealthBarWidget->OnHit, 0.f, 1, EUMGSequencePlayMode::PingPong, 1.3f);
+			HUDREF->HealthBarWidget->PlayAnimation(HUDREF->HealthBarWidget->OnHit, 0.f, 1, EUMGSequencePlayMode::PingPong, 1.5f);
 			if (PCREF) PCREF->ClientStartCameraShake(UCSB_Hit::StaticClass(), 1.3f);
 		}
 }
@@ -375,6 +377,18 @@ void ABaseCharacter::OnHealthChanged()
 {
 	if (HasAuthority()) MC_OnHealthChanged();
 	else SR_OnHealthChanged();
+}
+
+void ABaseCharacter::SR_OnAmmoCountChanged_Implementation()
+{
+}
+
+void ABaseCharacter::MC_OnAmmoCounChanged_Implementation()
+{
+}
+
+void ABaseCharacter::OnAmmoCountChanged()
+{
 }
 
 UWeaponMaster *ABaseCharacter::GetWeaponAtINDEX(int32 INDEX)
@@ -435,21 +449,25 @@ void ABaseCharacter::SpawnWeapon(TSubclassOf<UWeaponMaster> WeaponToSpawn)
 	if(!Loadout.Weapons.IsValidIndex(Loadout.CurrentWeaponINDEX)) SwitchWeapons(0);
 	UWeaponMaster* OldWeapon = GetCurrentWeapon();
 	if(OldWeapon){
-		GetWorld()->SpawnActor<AWeaponPickup>(OldWeapon->PickupClass, GetActorLocation() + GetActorForwardVector() * 100.f, FRotator(30.f, 0.f, 0.f));
+		AWeaponPickup* DroppedPickup = GetWorld()->SpawnActor<AWeaponPickup>(OldWeapon->PickupClass, GetActorLocation() + GetActorForwardVector() * 100.f, FRotator(30.f, 0.f, 0.f));
+		if(DroppedPickup) DroppedPickup->CurrentMagCount = OldWeapon->CurrentMagCount;
 		OldWeapon->DestroyComponent();
 		SetCurrentWeapon(nullptr);
 	}
 	UWeaponMaster* NewComp = Cast<UWeaponMaster>(AddComponentByClass(WeaponToSpawn, true, FTransform::Identity, false));
+	NewComp->OnAmmoCountChanged.AddDynamic(this, &ABaseCharacter::OnAmmoCountChanged);
 	return SetCurrentWeapon(NewComp);
 }
 
 void ABaseCharacter::ADS(float Value)
 {
 	if(!GetCurrentWeapon()) return;
-	/*if(IsLocallyControlled() && Value > .5f && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnAim(true);
-	else HUDREF->CrosshairWidget->PlayOnAim(false);*/
-	if(ArmsAnimInst) ArmsAnimInst->AimAlpha = FMath::FInterpTo(ArmsAnimInst->AimAlpha, Value, GetWorld()->GetDeltaSeconds(), 10.f);
-	Camera->SetFieldOfView(FMath::Lerp(120.f, GetCurrentWeapon()->ADSFOV, ArmsAnimInst->AimAlpha));
+	if(IsLocallyControlled() && Value > .5f && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnAim(true);
+	else if(HUDREF) HUDREF->CrosshairWidget->PlayOnAim(false);
+	if (ArmsAnimInst) {
+		ArmsAnimInst->AimAlpha = FMath::FInterpTo(ArmsAnimInst->AimAlpha, Value, GetWorld()->GetDeltaSeconds(), 10.f);
+		Camera->SetFieldOfView(FMath::Lerp(120.f, GetCurrentWeapon()->ADSFOV, ArmsAnimInst->AimAlpha));
+	}
 }
 
 void ABaseCharacter::StartAttack()

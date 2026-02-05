@@ -8,6 +8,8 @@
 #include "HealthSystem/DamageInfo.h"
 #include "WeaponMaster.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAmmoCountChanged);
+
 class USkeletalMesh;
 class AWeaponPickup;
 class UParticleSystem;
@@ -43,6 +45,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FireRate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 MaxMagCount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_CurrentMagCount)
+	int32 CurrentMagCount;
+
+	UFUNCTION()
+	void OnRep_CurrentMagCount();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AimOffset;
@@ -86,6 +97,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Recoil_Horizontal_Right;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnAmmoCountChanged OnAmmoCountChanged;
+
 
 protected:
 	// Called when the game starts
@@ -95,6 +109,6 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 };

@@ -6,6 +6,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "Animation/AnimSequence.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values for this component's properties
@@ -21,12 +22,19 @@ UWeaponMaster::UWeaponMaster()
 
 	WeaponMesh = nullptr;
 	MagazineMesh = nullptr;
+	MaxMagCount = 0;
+	CurrentMagCount = 0;
 	PickupClass = AWeaponPickup::StaticClass();
 	SocketToAttach = TEXT("");
 	FireAnim = nullptr;
 	EFX.Init(nullptr, 4);
 	WeaponName = EWeaponName::None;
 	
+}
+
+void UWeaponMaster::OnRep_CurrentMagCount()
+{
+	OnAmmoCountChanged.Broadcast();
 }
 
 
@@ -47,4 +55,12 @@ void UWeaponMaster::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 
 	// ...
 }
+
+void UWeaponMaster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UWeaponMaster, CurrentMagCount);
+}
+
 

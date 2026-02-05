@@ -211,7 +211,7 @@ private:
 	void Recoil();
 
 	UFUNCTION()
-	void Death();
+	void OnDeath();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MC_OnHealthChanged();
@@ -222,6 +222,15 @@ private:
 	UFUNCTION()
 	void OnHealthChanged();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_OnAmmoCounChanged();
+
+	UFUNCTION(Server, Reliable)
+	void SR_OnAmmoCountChanged();
+
+	UFUNCTION()
+	void OnAmmoCountChanged();
+
 
 public:
 
@@ -231,7 +240,7 @@ public:
 	UFUNCTION()
 	void SetWeaponAtINDEX(UWeaponMaster* Weapon, int32 INDEX);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UWeaponMaster* GetCurrentWeapon();
 
 	UFUNCTION()

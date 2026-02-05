@@ -14,7 +14,7 @@ class THENEWWORLD_API AGM_Test : public AGameMode
 {
 	GENERATED_BODY()
 	
-	
+
 	
 	
 };
