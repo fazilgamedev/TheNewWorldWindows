@@ -10,6 +10,7 @@ class ABaseCharacter;
 class UCrosshair;
 class UCompassBar;
 class UHealthBar;
+class UWeaponSlots;
 
 /**
  * 
@@ -24,23 +25,29 @@ public:
 	UPROPERTY()
 	ABaseCharacter* CharacterREF;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UCrosshair* CrosshairWidget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UCrosshair> CrosshairWidgetClass;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UCompassBar* CompassBarWidget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UCompassBar> CompassBarWidgetClass;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UHealthBar* HealthBarWidget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UHealthBar> HealthBarWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UWeaponSlots* WeaponSlotsWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UWeaponSlots> WeaponSlotsWidgetClass;
 
 protected:
 	

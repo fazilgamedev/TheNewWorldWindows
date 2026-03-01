@@ -20,8 +20,10 @@
 #include "UI/PlayerHUD.h"
 #include "UI/Crosshair.h"
 #include "UI/HealthBar.h"
+#include "UI/WeaponSlots.h"
 #include "Components/ProgressBar.h"
 #include "Animation/AnimSequence.h"
+#include "Components/TextBlock.h"
 
 // Sets default values
 ABaseCharacter::ABaseCharacter()
@@ -111,6 +113,10 @@ void ABaseCharacter::BeginPlay()
 
 	OnHealthChanged();
 
+	OnAmmoCountChanged();
+
+	OnRep_Loadout();
+
 }
 
 // Called every frame
@@ -156,7 +162,6 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Unarmed", IE_Pressed, this, &ABaseCharacter::SwitchUnarmed);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABaseCharacter::StartAttack);
 	PlayerInputComponent->BindAction("Attack", IE_Released, this, &ABaseCharacter::StopAttack);
-
 }
 
 void ABaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -213,6 +218,8 @@ void ABaseCharacter::LookRight(float Value)
 void ABaseCharacter::OnRep_Loadout()
 {
 	SetCurrentWeaponMesh();
+	OnAmmoCountChanged();
+	StopAttack();
 }
 
 void ABaseCharacter::SR_Interact_Implementation(AActor *Target, ABaseCharacter *Interactor)
@@ -223,7 +230,7 @@ void ABaseCharacter::SR_Interact_Implementation(AActor *Target, ABaseCharacter *
 void ABaseCharacter::MC_SetWeaponAtINDEX_Implementation(UWeaponMaster *Weapon, int32 INDEX)
 {
 	if(Loadout.Weapons.IsValidIndex(INDEX)) Loadout.Weapons[INDEX] = Weapon;
-	if(HasAuthority()) SetCurrentWeaponMesh();
+	OnRep_Loadout();
 }
 
 void ABaseCharacter::SR_SetWeaponAtINDEX_Implementation(UWeaponMaster *Weapon, int32 INDEX)
@@ -234,7 +241,6 @@ void ABaseCharacter::SR_SetWeaponAtINDEX_Implementation(UWeaponMaster *Weapon, i
 void ABaseCharacter::MC_SwitchWeapons_Implementation(int32 INDEX)
 {
 	if(Loadout.CurrentWeaponINDEX == INDEX) return;
-	StopAttack();
 	Loadout.CurrentWeaponINDEX = INDEX;
 	OnRep_Loadout();
 }
@@ -272,78 +278,9 @@ void ABaseCharacter::SwitchUnarmed()
 
 void ABaseCharacter::OnRep_bCanAttack()
 {
-	Fire();
-}
-
-void ABaseCharacter::SR_StartAttack_Implementation()
-{
-	bCanAttack = true;
-	OnRep_bCanAttack();
-}
-
-void ABaseCharacter::SR_StopAttack_Implementation()
-{
-	bCanAttack = false;
-	OnRep_bCanAttack();
-}
-
-void ABaseCharacter::Trace()
-{
-	if (GetCurrentWeapon()->CurrentMagCount <= 0) return;
-	FHitResult FireHitResult;
-	FVector S = Camera->GetComponentLocation();
-	FVector E = S + GetBaseAimRotation().Vector() * GetCurrentWeapon()->Range;
-	FCollisionQueryParams P;
-	P.AddIgnoredActor(this);
-	P.bTraceComplex = true;
-	//DrawDebugLine(GetWorld(), S, E, FColor::Red, false, 1.f, 1, 2.f);
-	AActor* HitActor = nullptr;
-	if(GetWorld()->LineTraceSingleByChannel(FireHitResult, S, E, ECollisionChannel::ECC_Visibility, P)){
-		HitActor = FireHitResult.GetActor();
-		if(!HitActor) return;
-		if(HitActor->GetClass()->ImplementsInterface(UHealthInterface::StaticClass())){
-			IHealthInterface::Execute_TakeDamage(HitActor, GetCurrentWeapon()->DamageInfo);
-		}
-	}
-	MC_Fire(FireHitResult.Location, FireHitResult.ImpactNormal.Rotation(), HitActor);	
-}
-
-void ABaseCharacter::MC_Fire_Implementation(FVector HitLoc, FRotator HitRot, AActor *HitActor)
-{
-	if(!GetCurrentWeapon()) return;
-	GetCurrentWeapon()->CurrentMagCount--;
-	if(IsLocallyControlled()){ 
-		WeaponFP->PlayAnimation(GetCurrentWeapon()->FireAnim, false);
-		ArmsAnimInst->Firing();
-		Recoil();
-		if(PCREF) PCREF->ClientStartCameraShake(UCSB_Fire::StaticClass(), 1.3f);
-		if(HitActor && HUDREF && HUDREF->CrosshairWidget && HitActor->ActorHasTag(TEXT("Player"))) {
-			HUDREF->CrosshairWidget->PlayOnHitMarker();
-			// UGameplayStatics::PlaySound2D(GetWorld(), HitSound);
-		}
-	}else WeaponTP->PlayAnimation(GetCurrentWeapon()->FireAnim, false);
-	if(!HitActor) return;
-	if(HitActor->ActorHasTag(TEXT("Stone"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[0], FTransform(HitRot, HitLoc));
-	else if(HitActor->ActorHasTag(TEXT("Metal"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[1], FTransform(HitRot, HitLoc));
-	else if(HitActor->ActorHasTag(TEXT("Wood"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[2], FTransform(HitRot, HitLoc));
-	else if(HitActor->ActorHasTag(TEXT("Player"))) { if(IsLocallyControlled()) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[3], FTransform(HitRot, HitLoc)); }
-	else UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[0], FTransform(HitRot, HitLoc));
-}
-
-void ABaseCharacter::Fire()
-{
-	if(bCanAttack && GetCurrentWeapon()){
-		if(HasAuthority()){
-			Trace();
-			GetWorldTimerManager().SetTimer(AttackHandle, this, &ABaseCharacter::Trace, GetCurrentWeapon()->FireRate, true);
-		}
-		if(IsLocallyControlled() && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnCrosshairFire(bCanAttack);
-	}else{
-		if(HasAuthority()){
-			GetWorldTimerManager().ClearTimer(AttackHandle);
-			AttackHandle.Invalidate();
-		}
-		if(IsLocallyControlled() && HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnCrosshairFire(bCanAttack);
+	if (HUDREF && HUDREF->CrosshairWidget) {
+		if (bCanAttack) HUDREF->CrosshairWidget->PlayOnCrosshairFire(true);
+		else HUDREF->CrosshairWidget->PlayOnCrosshairFire(false);
 	}
 }
 
@@ -351,6 +288,81 @@ void ABaseCharacter::Recoil()
 {
 	AddControllerPitchInput(-GetCurrentWeapon()->Recoil_Vertical);
 	AddControllerYawInput(FMath::RandRange(-GetCurrentWeapon()->Recoil_Horizontal_Left, GetCurrentWeapon()->Recoil_Horizontal_Right));
+}
+
+void ABaseCharacter::MC_StartFire_Implementation()
+{
+	if (!GetCurrentWeapon()) return;
+	UWeaponMaster* Weapon = GetCurrentWeapon();
+	if (Weapon->GetCurrentAmmoCount() <= 0) {
+		StopAttack();
+		return;
+	}
+	Weapon->SetCurrentAmmoCount(Weapon->GetCurrentAmmoCount() - 1);
+	Weapon->OnRep_CurrentMagCount();
+	AActor* HitActor = nullptr;
+	FHitResult FireHitResult;
+
+	FVector S = Camera->GetComponentLocation();
+	FVector E = S + GetBaseAimRotation().Vector() * Weapon->Range;
+	FCollisionQueryParams P;
+	P.AddIgnoredActor(this);
+	P.bTraceComplex = true;
+	if (GetWorld()->LineTraceSingleByChannel(FireHitResult, S, E, ECollisionChannel::ECC_Visibility, P)) {
+		HitActor = FireHitResult.GetActor();
+		if (!HitActor) return;
+		if (HitActor->GetClass()->ImplementsInterface(UHealthInterface::StaticClass())) {
+			IHealthInterface::Execute_TakeDamage(HitActor, Weapon->DamageInfo);
+		}
+	}
+
+	if (IsLocallyControlled()) {
+		WeaponFP->PlayAnimation(Weapon->FireAnim, false);
+		if (ArmsAnimInst) ArmsAnimInst->Firing();
+		Recoil();
+		if (PCREF) PCREF->ClientStartCameraShake(UCSB_Fire::StaticClass(), 1.3f);
+		if (HitActor && HitActor->ActorHasTag(TEXT("Player")) && HUDREF && HUDREF->CrosshairWidget) {
+			HUDREF->CrosshairWidget->PlayOnHitMarker();
+		}
+	}
+	else WeaponTP->PlayAnimation(Weapon->FireAnim, false);
+	if (!HitActor) return;
+	FRotator HitRot = FireHitResult.ImpactNormal.Rotation();
+	FVector HitLoc = FireHitResult.Location;
+	if (HitActor->ActorHasTag(TEXT("Stone"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[0], FTransform(HitRot, HitLoc));
+	else if (HitActor->ActorHasTag(TEXT("Metal"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[1], FTransform(HitRot, HitLoc));
+	else if (HitActor->ActorHasTag(TEXT("Wood"))) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[2], FTransform(HitRot, HitLoc));
+	else if (HitActor->ActorHasTag(TEXT("Player"))) { if (IsLocallyControlled()) UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[3], FTransform(HitRot, HitLoc)); }
+	else UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), GetCurrentWeapon()->EFX[0], FTransform(HitRot, HitLoc));
+}
+
+void ABaseCharacter::SR_StartFire_Implementation()
+{
+	MC_StartFire();
+}
+
+void ABaseCharacter::MC_StopAttack_Implementation()
+{
+	if (!bCanAttack) return;
+	bCanAttack = false;
+	if (HasAuthority()) OnRep_bCanAttack();
+	GetWorldTimerManager().ClearTimer(AttackHandle);
+	AttackHandle.Invalidate();
+}
+
+void ABaseCharacter::SR_StopAttack_Implementation()
+{
+	MC_StopAttack();
+}
+
+void ABaseCharacter::MC_OnAmmoCountChanged_Implementation()
+{
+	if (HUDREF && HUDREF->WeaponSlotsWidget) HUDREF->WeaponSlotsWidget->UpdateAmmoCounter(GetCurrentWeapon() ? FString::FromInt(GetCurrentWeapon()->GetCurrentAmmoCount()) : TEXT(" - / - "));
+}
+
+void ABaseCharacter::SR_OnAmmoCountChanged_Implementation()
+{
+	MC_OnAmmoCountChanged();
 }
 
 void ABaseCharacter::OnDeath()
@@ -379,18 +391,6 @@ void ABaseCharacter::OnHealthChanged()
 	else SR_OnHealthChanged();
 }
 
-void ABaseCharacter::SR_OnAmmoCountChanged_Implementation()
-{
-}
-
-void ABaseCharacter::MC_OnAmmoCounChanged_Implementation()
-{
-}
-
-void ABaseCharacter::OnAmmoCountChanged()
-{
-}
-
 UWeaponMaster *ABaseCharacter::GetWeaponAtINDEX(int32 INDEX)
 {
     return Loadout.Weapons.IsValidIndex(INDEX) ? Loadout.Weapons[INDEX] : nullptr;
@@ -405,7 +405,7 @@ void ABaseCharacter::SetWeaponAtINDEX(UWeaponMaster *Weapon, int32 INDEX)
 
 UWeaponMaster *ABaseCharacter::GetCurrentWeapon()
 {
-    return Loadout.Weapons.IsValidIndex(Loadout.CurrentWeaponINDEX) ? GetWeaponAtINDEX(Loadout.CurrentWeaponINDEX) : nullptr;
+    return GetWeaponAtINDEX(Loadout.CurrentWeaponINDEX);
 }
 
 void ABaseCharacter::SetCurrentWeapon(UWeaponMaster *Weapon)
@@ -449,14 +449,15 @@ void ABaseCharacter::SpawnWeapon(TSubclassOf<UWeaponMaster> WeaponToSpawn)
 	if(!Loadout.Weapons.IsValidIndex(Loadout.CurrentWeaponINDEX)) SwitchWeapons(0);
 	UWeaponMaster* OldWeapon = GetCurrentWeapon();
 	if(OldWeapon){
+		OldWeapon->OnAmmoCountChanged.RemoveDynamic(this, &ABaseCharacter::OnAmmoCountChanged);
 		AWeaponPickup* DroppedPickup = GetWorld()->SpawnActor<AWeaponPickup>(OldWeapon->PickupClass, GetActorLocation() + GetActorForwardVector() * 100.f, FRotator(30.f, 0.f, 0.f));
-		if(DroppedPickup) DroppedPickup->CurrentMagCount = OldWeapon->CurrentMagCount;
+		if(DroppedPickup) DroppedPickup->CurrentMagCount = OldWeapon->GetCurrentAmmoCount();
 		OldWeapon->DestroyComponent();
 		SetCurrentWeapon(nullptr);
 	}
 	UWeaponMaster* NewComp = Cast<UWeaponMaster>(AddComponentByClass(WeaponToSpawn, true, FTransform::Identity, false));
 	NewComp->OnAmmoCountChanged.AddDynamic(this, &ABaseCharacter::OnAmmoCountChanged);
-	return SetCurrentWeapon(NewComp);
+	SetCurrentWeapon(NewComp);
 }
 
 void ABaseCharacter::ADS(float Value)
@@ -470,14 +471,38 @@ void ABaseCharacter::ADS(float Value)
 	}
 }
 
+void ABaseCharacter::FireWeapon()
+{
+	if (HasAuthority()) MC_StartFire();
+	else SR_StartFire();
+}
+
 void ABaseCharacter::StartAttack()
 {
-	if(!IsLocallyControlled()) return;
-	SR_StartAttack();
+	if (GetCurrentWeapon()) {
+		UWeaponMaster* Weapon = GetCurrentWeapon();
+		if (Weapon->GetCurrentAmmoCount() <= 0) {
+			StopAttack();
+			return;
+		}
+		bCanAttack = true;
+		if (HasAuthority()) OnRep_bCanAttack();
+		FireWeapon();
+		GetWorldTimerManager().SetTimer(AttackHandle, this, &ABaseCharacter::FireWeapon, Weapon->FireRate, true);
+	}
+	else {
+
+	}
 }
 
 void ABaseCharacter::StopAttack()
 {
-	if(!IsLocallyControlled()) return;
-	SR_StopAttack();
+	if (HasAuthority()) MC_StopAttack();
+	else SR_StopAttack();
+}
+
+void ABaseCharacter::OnAmmoCountChanged()
+{
+	if (HasAuthority()) MC_OnAmmoCountChanged();
+	else SR_OnAmmoCountChanged();
 }

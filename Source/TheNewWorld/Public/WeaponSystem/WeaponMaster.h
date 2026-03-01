@@ -47,10 +47,10 @@ public:
 	float FireRate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MaxMagCount;
+	int32 MaxAmmoCount;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, ReplicatedUsing = OnRep_CurrentMagCount)
-	int32 CurrentMagCount;
+	int32 CurrentAmmoCount;
 
 	UFUNCTION()
 	void OnRep_CurrentMagCount();
@@ -100,7 +100,6 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnAmmoCountChanged OnAmmoCountChanged;
 
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -110,5 +109,11 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	int32 GetCurrentAmmoCount();
+
+	UFUNCTION(BlueprintCallable)
+	void SetCurrentAmmoCount(float Ammo);
 	
 };

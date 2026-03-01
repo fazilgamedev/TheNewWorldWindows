@@ -7,6 +7,7 @@
 #include "UI/Crosshair.h"
 #include "UI/CompassBar.h"
 #include "UI/HealthBar.h"
+#include "UI/WeaponSlots.h"
 
 void APlayerHUD::BeginPlay()
 {
@@ -27,5 +28,9 @@ void APlayerHUD::BeginPlay()
     HealthBarWidget = CreateWidget<UHealthBar>(GetWorld(), HealthBarWidgetClass);
     HealthBarWidget->CharacterREF = CharacterREF;
     HealthBarWidget->AddToViewport();
+
+    WeaponSlotsWidget = CreateWidget<UWeaponSlots>(GetWorld(), WeaponSlotsWidgetClass);
+    WeaponSlotsWidget->CharacterREF = CharacterREF;
+    WeaponSlotsWidget->AddToViewport();
 
 }

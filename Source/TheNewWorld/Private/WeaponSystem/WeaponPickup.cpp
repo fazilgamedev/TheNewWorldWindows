@@ -34,7 +34,9 @@ void AWeaponPickup::SR_Interact_Implementation(ABaseCharacter *Interactor, TSubc
 {
     Interactor->SpawnWeapon(Weapon);
     UWeaponMaster* NewWeapon = Interactor->GetCurrentWeapon();
-    if (NewWeapon) NewWeapon->CurrentMagCount = CurrentMagCount;
+    if (NewWeapon) {
+        NewWeapon->CurrentAmmoCount = CurrentMagCount;
+        Interactor->OnAmmoCountChanged();
+    }
     Destroy();
-    
 }

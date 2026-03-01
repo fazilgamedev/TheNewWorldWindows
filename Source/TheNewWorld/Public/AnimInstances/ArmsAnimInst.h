@@ -113,7 +113,7 @@ private:
 
 public:
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void Firing();
 	
 	

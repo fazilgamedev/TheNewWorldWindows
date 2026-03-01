@@ -25,8 +25,14 @@ protected:
 
 public:
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn = "true"))
+	ABaseCharacter* CharacterREF;
+
 	UPROPERTY(meta = (BindWidget));
 	UTextBlock* AmmoCounter;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void UpdateAmmoCounter(const FString& AmmoCount);
 
 
 };

@@ -22,8 +22,8 @@ UWeaponMaster::UWeaponMaster()
 
 	WeaponMesh = nullptr;
 	MagazineMesh = nullptr;
-	MaxMagCount = 0;
-	CurrentMagCount = 0;
+	MaxAmmoCount = 0;
+	CurrentAmmoCount = MaxAmmoCount;
 	PickupClass = AWeaponPickup::StaticClass();
 	SocketToAttach = TEXT("");
 	FireAnim = nullptr;
@@ -36,7 +36,6 @@ void UWeaponMaster::OnRep_CurrentMagCount()
 {
 	OnAmmoCountChanged.Broadcast();
 }
-
 
 // Called when the game starts
 void UWeaponMaster::BeginPlay()
@@ -60,7 +59,17 @@ void UWeaponMaster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UWeaponMaster, CurrentMagCount);
+	DOREPLIFETIME(UWeaponMaster, CurrentAmmoCount);
+}
+
+int32 UWeaponMaster::GetCurrentAmmoCount()
+{
+	return CurrentAmmoCount;
+}
+
+void UWeaponMaster::SetCurrentAmmoCount(float Ammo)
+{
+	CurrentAmmoCount = Ammo;
 }
 
 

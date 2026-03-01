@@ -115,13 +115,13 @@ private:
 	UPROPERTY()
 	APlayerController* PCREF;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	APlayerHUD* HUDREF;
 
 	UPROPERTY()
 	FTimerHandle AttackHandle;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	UArmsAnimInst* ArmsAnimInst;
 
 	UPROPERTY()
@@ -133,7 +133,7 @@ private:
 	UPROPERTY()
 	FVector CurrentAmp;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"));
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	USoundBase* HitSound;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -192,23 +192,26 @@ private:
 	UFUNCTION()
 	void OnRep_bCanAttack();
 
+	UFUNCTION()
+	void Recoil();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_StartFire();
+
 	UFUNCTION(Server, Reliable)
-	void SR_StartAttack();
+	void SR_StartFire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_StopAttack();
 
 	UFUNCTION(Server, Reliable)
 	void SR_StopAttack();
-	
-	UFUNCTION()
-	void Trace();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MC_Fire(FVector HitLoc, FRotator HitRot, AActor* HitActor);
+	void MC_OnAmmoCountChanged();
 
-	UFUNCTION()
-	void Fire();
-
-	UFUNCTION()
-	void Recoil();
+	UFUNCTION(Server, Reliable)
+	void SR_OnAmmoCountChanged();
 
 	UFUNCTION()
 	void OnDeath();
@@ -221,15 +224,6 @@ private:
 
 	UFUNCTION()
 	void OnHealthChanged();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MC_OnAmmoCounChanged();
-
-	UFUNCTION(Server, Reliable)
-	void SR_OnAmmoCountChanged();
-
-	UFUNCTION()
-	void OnAmmoCountChanged();
 
 
 public:
@@ -259,11 +253,16 @@ public:
 	void ADS(float Value);
 
 	UFUNCTION()
+	void FireWeapon();
+
+	UFUNCTION()
 	void StartAttack();
 
 	UFUNCTION()
 	void StopAttack();
 
+	UFUNCTION()
+	void OnAmmoCountChanged();
 
 	
 };
