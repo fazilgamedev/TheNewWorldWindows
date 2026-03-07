@@ -14,6 +14,7 @@ class USkeletalMesh;
 class AWeaponPickup;
 class UParticleSystem;
 class UAnimSequence;
+class UTexture2D;
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable )
@@ -36,6 +37,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName SocketToAttach;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* Thumbnail;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FDamageInfo DamageInfo;

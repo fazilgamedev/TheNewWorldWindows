@@ -243,6 +243,7 @@ void ABaseCharacter::MC_SwitchWeapons_Implementation(int32 INDEX)
 	if(Loadout.CurrentWeaponINDEX == INDEX) return;
 	Loadout.CurrentWeaponINDEX = INDEX;
 	OnRep_Loadout();
+	if(HUDREF && HUDREF->CrosshairWidget) HUDREF->CrosshairWidget->PlayOnCrosshairFire(false);
 }
 
 void ABaseCharacter::SR_SwitchWeapons_Implementation(int32 INDEX)
@@ -345,7 +346,7 @@ void ABaseCharacter::MC_StopAttack_Implementation()
 {
 	if (!bCanAttack) return;
 	bCanAttack = false;
-	if (HasAuthority()) OnRep_bCanAttack();
+	OnRep_bCanAttack();
 	GetWorldTimerManager().ClearTimer(AttackHandle);
 	AttackHandle.Invalidate();
 }
@@ -486,7 +487,7 @@ void ABaseCharacter::StartAttack()
 			return;
 		}
 		bCanAttack = true;
-		if (HasAuthority()) OnRep_bCanAttack();
+		OnRep_bCanAttack();
 		FireWeapon();
 		GetWorldTimerManager().SetTimer(AttackHandle, this, &ABaseCharacter::FireWeapon, Weapon->FireRate, true);
 	}

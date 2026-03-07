@@ -22,8 +22,8 @@ void UCrosshair::NativeTick(const FGeometry & Geometry, float InDeltaTime)
 
 void UCrosshair::PlayOnCrosshairFire(bool bCanAttack)
 {
-	if(CharacterREF->GetCurrentWeapon()) { 
-		if(bCanAttack) PlayAnimation(CrosshairFire, 0.f, 1, EUMGSequencePlayMode::Forward, 2.f);
+	if (CharacterREF->GetCurrentWeapon()) {
+		if (bCanAttack) PlayAnimation(CrosshairFire, 0.f, 1, EUMGSequencePlayMode::Forward, 2.f);
 		else PlayAnimation(CrosshairFire, 0.f, 1, EUMGSequencePlayMode::Reverse, 2.f);
 	}
 }
