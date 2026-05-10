@@ -69,6 +69,9 @@ public:
 	UAnimSequence* FireAnim;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimSequence* ReloadAnimChar;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<UParticleSystem*> EFX;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

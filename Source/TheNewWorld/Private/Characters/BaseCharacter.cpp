@@ -392,6 +392,16 @@ void ABaseCharacter::OnHealthChanged()
 	else SR_OnHealthChanged();
 }
 
+void ABaseCharacter::SR_OnReload_Implementation()
+{
+
+}
+
+void ABaseCharacter::MC_OnReload_Implementation()
+{
+
+}
+
 UWeaponMaster *ABaseCharacter::GetWeaponAtINDEX(int32 INDEX)
 {
     return Loadout.Weapons.IsValidIndex(INDEX) ? Loadout.Weapons[INDEX] : nullptr;
@@ -506,4 +516,8 @@ void ABaseCharacter::OnAmmoCountChanged()
 {
 	if (HasAuthority()) MC_OnAmmoCountChanged();
 	else SR_OnAmmoCountChanged();
+}
+
+void ABaseCharacter::ReloadWeapon()
+{
 }

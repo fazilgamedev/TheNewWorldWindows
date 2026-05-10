@@ -225,6 +225,12 @@ private:
 	UFUNCTION()
 	void OnHealthChanged();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_OnReload();
+
+	UFUNCTION(Server, Reliable)
+	void SR_OnReload();
+
 
 public:
 
@@ -263,6 +269,9 @@ public:
 
 	UFUNCTION()
 	void OnAmmoCountChanged();
+
+	UFUNCTION()
+	void ReloadWeapon();
 
 	
 };
